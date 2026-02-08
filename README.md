@@ -1,4 +1,4 @@
-# Data Analyser – Local Web App
+# Data Analyser
 
 A locally-running web app that lets you upload tabular data files (CSV, TSV, Excel) and performs automated exploratory data analysis with visualisations.
 
