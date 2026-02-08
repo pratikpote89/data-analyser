@@ -1,5 +1,4 @@
 (() => {
-  const btnUpload  = document.getElementById('btn-upload');
   const btnAnalyse = document.getElementById('btn-analyse');
   const fileInput   = document.getElementById('file-input');
   const fileBadge   = document.getElementById('file-badge');
@@ -11,8 +10,8 @@
   const contentEl   = document.getElementById('results-content');
   const detailEl    = document.getElementById('col-detail');
 
-  let analysisData = null;   // store full result for click handling
-  let activeCol    = null;   // currently selected column name
+  let analysisData = null;
+  let activeCol    = null;
 
   /* ── Helpers ───────────────────────────────────────────── */
   let fadeTimer = null;
@@ -22,7 +21,6 @@
     statusEl.className = `status ${type}`;
     statusEl.classList.remove('hidden');
 
-    // Success messages auto-vanish after 3.5s; errors stay
     if (type === 'success') {
       statusEl.classList.add('auto-fade');
       fadeTimer = setTimeout(() => {
@@ -35,67 +33,33 @@
   function showLoader() { loaderEl.classList.remove('hidden'); }
   function hideLoader() { loaderEl.classList.add('hidden'); }
 
-  /* ── Upload ────────────────────────────────────────────── */
-  btnUpload.addEventListener('click', () => fileInput.click());
+  /* ── Analyse button → open file picker ─────────────────── */
+  btnAnalyse.addEventListener('click', () => fileInput.click());
 
+  /* ── File selected → upload + analyse in one call ──────── */
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
 
+    // Reset state
     hideStatus();
     resultsEl.classList.add('hidden');
     contentEl.innerHTML = '';
     detailEl.innerHTML = '';
-    btnAnalyse.disabled = true;
     analysisData = null;
     activeCol = null;
 
+    // Show file badge
+    fileName.textContent = file.name;
+    fileBadge.classList.remove('hidden');
+
+    // Upload + analyse
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      showStatus('Uploading…', 'info');
-      const res = await fetch('/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-
-      if (data.ok) {
-        showStatus(`File "${data.filename}" uploaded successfully.`, 'success');
-        fileName.textContent = data.filename;
-        fileBadge.classList.remove('hidden');
-        btnAnalyse.disabled = false;
-      } else {
-        showStatus(data.error || 'Upload failed.', 'error');
-      }
-    } catch (err) {
-      showStatus('Network error during upload.', 'error');
-    }
-  });
-
-  /* ── Clear file ────────────────────────────────────────── */
-  btnClear.addEventListener('click', () => {
-    fileInput.value = '';
-    fileBadge.classList.add('hidden');
-    btnAnalyse.disabled = true;
-    hideStatus();
-    resultsEl.classList.add('hidden');
-    contentEl.innerHTML = '';
-    detailEl.innerHTML = '';
-    analysisData = null;
-    activeCol = null;
-  });
-
-  /* ── Analyse ───────────────────────────────────────────── */
-  btnAnalyse.addEventListener('click', async () => {
-    hideStatus();
-    resultsEl.classList.add('hidden');
-    contentEl.innerHTML = '';
-    detailEl.innerHTML = '';
-    analysisData = null;
-    activeCol = null;
-    showLoader();
-
-    try {
-      const res = await fetch('/analyse');
+      showLoader();
+      const res = await fetch('/analyse', { method: 'POST', body: formData });
       const data = await res.json();
       hideLoader();
 
@@ -117,8 +81,20 @@
 
     } catch (err) {
       hideLoader();
-      showStatus('Network error during analysis.', 'error');
+      showStatus('Network error. Please try again.', 'error');
     }
+  });
+
+  /* ── Clear file ────────────────────────────────────────── */
+  btnClear.addEventListener('click', () => {
+    fileInput.value = '';
+    fileBadge.classList.add('hidden');
+    hideStatus();
+    resultsEl.classList.add('hidden');
+    contentEl.innerHTML = '';
+    detailEl.innerHTML = '';
+    analysisData = null;
+    activeCol = null;
   });
 
   /* ── Render summary + clickable column tags ────────────── */
