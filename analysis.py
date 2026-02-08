@@ -1,47 +1,6 @@
 import pandas as pd
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import seaborn as sns
-import io
-import base64
 import os
-
-# ── Global theme ─────────────────────────────────────────────────────
-sns.set_theme(
-    style="whitegrid",
-    rc={
-        "figure.facecolor":  "#ffffff",
-        "axes.facecolor":    "#ffffff",
-        "axes.edgecolor":    "#d1d5db",
-        "axes.labelcolor":   "#374151",
-        "text.color":        "#374151",
-        "xtick.color":       "#6b7280",
-        "ytick.color":       "#6b7280",
-        "grid.color":        "#f3f4f6",
-        "grid.linestyle":    "--",
-        "font.family":       "sans-serif",
-        "font.size":         11,
-    }
-)
-
-PALETTE = sns.color_palette([
-    "#0d9373", "#5b3fcc", "#e05d44", "#f59e0b",
-    "#06b6d4", "#8b5cf6", "#ec4899", "#10b981",
-    "#3b82f6", "#f97316",
-])
-
-
-def _fig_to_base64(fig) -> str:
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=140, bbox_inches='tight',
-                facecolor=fig.get_facecolor())
-    buf.seek(0)
-    encoded = base64.b64encode(buf.read()).decode('utf-8')
-    plt.close(fig)
-    return encoded
 
 
 def categorise_column(series: pd.Series) -> str:
@@ -65,12 +24,11 @@ def categorise_column(series: pd.Series) -> str:
     return "Both Numerical and Categorical"
 
 
-def make_histogram(series: pd.Series, col_name: str) -> str:
+def histogram_data(series: pd.Series, col_name: str) -> dict:
+    """Return histogram bin edges and counts as JSON-friendly dict."""
     clean = pd.to_numeric(series.dropna(), errors='coerce').dropna()
     if clean.empty:
-        return ""
-
-    fig, ax = plt.subplots(figsize=(7, 4))
+        return {}
 
     # Optimal bins – Freedman-Diaconis with fallback
     q75, q25 = np.percentile(clean, [75, 25])
@@ -82,67 +40,48 @@ def make_histogram(series: pd.Series, col_name: str) -> str:
         n_bins = min(int(np.sqrt(len(clean))), 30)
     n_bins = min(n_bins, 50)
 
-    sns.histplot(clean, bins=n_bins, kde=False, color=PALETTE[0],
-                 edgecolor="#ffffff", linewidth=.8, alpha=.75, ax=ax)
+    counts, edges = np.histogram(clean, bins=n_bins)
 
-    # Annotate bar counts
-    for patch in ax.patches:
-        h = patch.get_height()
-        if h > 0:
-            ax.text(patch.get_x() + patch.get_width() / 2, h,
-                    f'{int(h)}', ha='center', va='bottom',
-                    fontsize=8, fontweight='600', color='#374151')
+    # Build labels as range strings
+    labels = []
+    for i in range(len(counts)):
+        lo = round(float(edges[i]), 1)
+        hi = round(float(edges[i + 1]), 1)
+        labels.append(f"{lo} – {hi}")
 
-    ax.set_xlabel(col_name, fontweight='600', fontsize=11)
-    ax.set_ylabel('Frequency', fontweight='600', fontsize=11)
-    ax.set_title(f'Distribution of {col_name}', fontweight='700',
-                 fontsize=13, pad=12, color='#111827')
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    sns.despine(left=True, bottom=True)
-    fig.tight_layout()
-    return _fig_to_base64(fig)
+    return {
+        "type": "histogram",
+        "title": f"Distribution of {col_name}",
+        "labels": labels,
+        "values": [int(c) for c in counts],
+        "x_label": col_name,
+        "y_label": "Frequency",
+    }
 
 
-def make_bar_chart(series: pd.Series, col_name: str) -> str:
+def bar_chart_data(series: pd.Series, col_name: str) -> dict:
+    """Return bar chart categories and counts as JSON-friendly dict."""
     clean = series.dropna().astype(str)
     if clean.empty:
-        return ""
+        return {}
 
     value_counts = clean.value_counts()
-    categories = value_counts.index.tolist()
-    counts = value_counts.values
-
-    fig, ax = plt.subplots(figsize=(7, 4))
-
-    colors = [PALETTE[i % len(PALETTE)] for i in range(len(categories))]
-    bars = ax.bar(categories, counts, color=colors, edgecolor="#ffffff",
-                  linewidth=.8, alpha=.85)
-
-    # Annotate bar counts
-    for bar, count in zip(bars, counts):
-        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                f'{int(count)}', ha='center', va='bottom',
-                fontsize=9, fontweight='600', color='#374151')
-
-    # Truncate long labels
-    labels = [c if len(c) <= 18 else c[:16] + '…' for c in categories]
-    ax.set_xticks(range(len(categories)))
-    ax.set_xticklabels(labels, rotation=30, ha='right', fontsize=9)
-    ax.set_xlabel(col_name, fontweight='600', fontsize=11)
-    ax.set_ylabel('Count', fontweight='600', fontsize=11)
-    ax.set_title(f'Value Counts of {col_name}', fontweight='700',
-                 fontsize=13, pad=12, color='#111827')
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-    sns.despine(left=True, bottom=True)
-    fig.tight_layout()
-    return _fig_to_base64(fig)
+    return {
+        "type": "bar",
+        "title": f"Value Counts of {col_name}",
+        "labels": value_counts.index.tolist(),
+        "values": [int(c) for c in value_counts.values],
+        "x_label": col_name,
+        "y_label": "Count",
+    }
 
 
-def detect_outliers(series: pd.Series) -> list[dict]:
+def detect_outliers(series: pd.Series) -> dict:
+    """Detect outliers using IQR. Returns dict with rows, thresholds, and truncation info."""
     numeric = pd.to_numeric(series, errors='coerce')
     clean = numeric.dropna()
     if clean.empty or len(clean) < 4:
-        return []
+        return {"rows": [], "total": 0}
 
     q1 = clean.quantile(0.25)
     q3 = clean.quantile(0.75)
@@ -153,8 +92,17 @@ def detect_outliers(series: pd.Series) -> list[dict]:
     outliers = []
     for idx, val in numeric.items():
         if pd.notna(val) and (val < lower or val > upper):
-            outliers.append({"row": int(idx) + 1, "value": round(float(val), 4)})
-    return outliers
+            outliers.append({"row": int(idx) + 1, "value": round(float(val), 1)})
+
+    total = len(outliers)
+    display = outliers[:5]
+
+    return {
+        "rows": display,
+        "total": total,
+        "lower_threshold": round(float(lower), 1),
+        "upper_threshold": round(float(upper), 1),
+    }
 
 
 def analyse_file(filepath: str) -> dict:
@@ -181,7 +129,7 @@ def analyse_file(filepath: str) -> dict:
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
         "column_names": df.columns.tolist(),
-        "preview": df.head(10).fillna("").to_dict(orient="records"),
+        "preview": df.head(5).fillna("").to_dict(orient="records"),
         "preview_columns": df.columns.tolist(),
         "column_analysis": [],
     }
@@ -193,40 +141,31 @@ def analyse_file(filepath: str) -> dict:
         unique = int(series.nunique())
         dtype = str(series.dtype)
 
-        # Basic stats for numerical data
+        # Basic stats (rounded to 1 decimal)
         stats = {}
         numeric_clean = pd.to_numeric(series, errors='coerce').dropna()
         if category in ("Numerical", "Both Numerical and Categorical") and len(numeric_clean) > 0:
             stats = {
-                "min":    round(float(numeric_clean.min()), 4),
-                "max":    round(float(numeric_clean.max()), 4),
-                "mean":   round(float(numeric_clean.mean()), 4),
-                "median": round(float(numeric_clean.median()), 4),
-                "std":    round(float(numeric_clean.std()), 4),
+                "min":    round(float(numeric_clean.min()), 1),
+                "max":    round(float(numeric_clean.max()), 1),
+                "mean":   round(float(numeric_clean.mean()), 1),
+                "median": round(float(numeric_clean.median()), 1),
+                "std":    round(float(numeric_clean.std()), 1),
             }
 
-        if category == "Both Numerical and Categorical":
-            result["column_analysis"].append({
-                "name": col,
-                "category": category,
-                "dtype": dtype,
-                "unique": unique,
-                "stats": stats,
-                "missing": missing,
-                "missing_msg": f"Total missing values are : {missing}",
-                "chart": make_histogram(series, col),
-                "chart2": make_bar_chart(series, col),
-                "outliers": detect_outliers(series),
-            })
-            continue
-
-        chart = ""
+        # Chart data as JSON (not images)
+        chart = {}
+        chart2 = {}
         if category == "Numerical":
-            chart = make_histogram(series, col)
+            chart = histogram_data(series, col)
         elif category == "Categorical":
-            chart = make_bar_chart(series, col)
+            chart = bar_chart_data(series, col)
+        else:
+            chart = histogram_data(series, col)
+            chart2 = bar_chart_data(series, col)
 
-        outliers = detect_outliers(series) if category == "Numerical" else []
+        # Outliers
+        outliers = detect_outliers(series) if category in ("Numerical", "Both Numerical and Categorical") else {"rows": [], "total": 0}
 
         result["column_analysis"].append({
             "name": col,
@@ -237,7 +176,7 @@ def analyse_file(filepath: str) -> dict:
             "missing": missing,
             "missing_msg": f"Total missing values are : {missing}",
             "chart": chart,
-            "chart2": "",
+            "chart2": chart2,
             "outliers": outliers,
         })
 

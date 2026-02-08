@@ -7,12 +7,12 @@
   <link rel="stylesheet" href="/static/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
   <!-- ── Background visuals ─────────────────────────────────── -->
-  <div class="bg-visuals" aria-hidden="true">
-    <!-- Bar chart -->
+  <div class="bg-visuals" id="bg-visuals" aria-hidden="true">
     <svg class="bg-icon bg-bars" viewBox="0 0 120 100" fill="none">
       <rect x="5"  y="55" width="16" height="40" rx="3" fill="currentColor"/>
       <rect x="27" y="35" width="16" height="60" rx="3" fill="currentColor"/>
@@ -20,19 +20,16 @@
       <rect x="71" y="45" width="16" height="50" rx="3" fill="currentColor"/>
       <rect x="93" y="25" width="16" height="70" rx="3" fill="currentColor"/>
     </svg>
-    <!-- Pie chart -->
     <svg class="bg-icon bg-pie" viewBox="0 0 100 100" fill="none">
       <circle cx="50" cy="50" r="42" stroke="currentColor" stroke-width="5" fill="none"/>
       <path d="M50 50 L50 8 A42 42 0 0 1 88 65 Z" fill="currentColor"/>
     </svg>
-    <!-- Line chart -->
     <svg class="bg-icon bg-line" viewBox="0 0 140 80" fill="none">
       <polyline points="5,65 25,40 50,55 70,20 95,35 120,10 135,25" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       <circle cx="25"  cy="40" r="4" fill="currentColor"/>
       <circle cx="70"  cy="20" r="4" fill="currentColor"/>
       <circle cx="120" cy="10" r="4" fill="currentColor"/>
     </svg>
-    <!-- Scatter dots -->
     <svg class="bg-icon bg-scatter" viewBox="0 0 120 120" fill="none">
       <circle cx="15" cy="85" r="5" fill="currentColor"/>
       <circle cx="30" cy="60" r="5" fill="currentColor"/>
@@ -43,7 +40,6 @@
       <circle cx="95" cy="45" r="5" fill="currentColor"/>
       <circle cx="110" cy="15" r="5" fill="currentColor"/>
     </svg>
-    <!-- Table / grid -->
     <svg class="bg-icon bg-table" viewBox="0 0 110 90" fill="none" stroke="currentColor" stroke-width="3">
       <rect x="3" y="3" width="104" height="84" rx="6"/>
       <line x1="3" y1="25" x2="107" y2="25"/>
@@ -52,12 +48,10 @@
       <line x1="40" y1="3" x2="40" y2="87"/>
       <line x1="75" y1="3" x2="75" y2="87"/>
     </svg>
-    <!-- Magnifying glass -->
     <svg class="bg-icon bg-search" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round">
       <circle cx="42" cy="42" r="28"/>
       <line x1="62" y1="62" x2="90" y2="90"/>
     </svg>
-    <!-- Histogram -->
     <svg class="bg-icon bg-hist" viewBox="0 0 100 80" fill="none">
       <rect x="5"  y="50" width="12" height="25" rx="2" fill="currentColor"/>
       <rect x="20" y="30" width="12" height="45" rx="2" fill="currentColor"/>
@@ -66,7 +60,6 @@
       <rect x="65" y="40" width="12" height="35" rx="2" fill="currentColor"/>
       <rect x="80" y="55" width="12" height="20" rx="2" fill="currentColor"/>
     </svg>
-    <!-- Gear / settings -->
     <svg class="bg-icon bg-gear" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4">
       <circle cx="50" cy="50" r="18"/>
       <path d="M50 5 L55 22 L45 22Z"/>
@@ -108,7 +101,6 @@
       <button id="btn-clear" class="btn-clear" title="Remove file">✕</button>
     </div>
 
-    <!-- hidden file input -->
     <input type="file" id="file-input" accept=".csv,.tsv,.xls,.xlsx,.xlsm" hidden />
   </section>
 
