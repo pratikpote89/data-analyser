@@ -1,0 +1,16 @@
+Name,Age,Salary,Department,Score,Rating
+Alice,30,55000,Engineering,85.5,A
+Bob,25,48000,Marketing,92.3,B
+Charlie,35,120000,Engineering,78.1,A
+Diana,28,,Sales,88.7,C
+Eve,45,62000,Marketing,,B
+Frank,22,41000,Sales,95.2,A
+Grace,33,59000,Engineering,73.4,B
+Hank,500,70000,Marketing,81.0,C
+Ivy,29,52000,,86.9,A
+Jack,31,300000,Engineering,91.5,B
+Kate,27,47000,Sales,84.2,
+Leo,38,65000,Marketing,77.8,A
+Mona,26,43000,Engineering,89.6,B
+Ned,34,58000,Sales,82.3,C
+Olivia,40,71000,Marketing,76.5,A
