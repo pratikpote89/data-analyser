@@ -131,10 +131,36 @@
       <div class="summary-card"><div class="label">Total Columns</div><div class="value">${r.columns}</div></div>
     </div>`;
 
-    // Column names as clickable tags
-    html += `<div class="col-list"><h3>Column Names <span style="font-size:.75rem;font-weight:400;color:#9ca3af;">— click a column to view its analysis</span></h3><div class="col-tags">`;
+    // Data preview table
+    if (r.preview && r.preview.length > 0) {
+      html += `<div class="preview-section">`;
+      html += `<h3 class="section-title">Data Preview <span class="section-hint">first ${r.preview.length} rows</span></h3>`;
+      html += `<div class="preview-scroll"><table class="preview-table"><thead><tr>`;
+      r.preview_columns.forEach(col => {
+        html += `<th>${escHtml(String(col))}</th>`;
+      });
+      html += `</tr></thead><tbody>`;
+      r.preview.forEach(row => {
+        html += `<tr>`;
+        r.preview_columns.forEach(col => {
+          const val = row[col] !== undefined && row[col] !== null ? String(row[col]) : '';
+          html += `<td>${escHtml(val)}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div></div>`;
+    }
+
+    // Column names as clickable tags with dtype badges
+    html += `<div class="col-list"><h3 class="section-title">Columns <span class="section-hint">click a column to view its analysis</span></h3><div class="col-tags">`;
     r.column_names.forEach(name => {
-      html += `<span class="col-tag" data-col="${escHtml(name)}">${escHtml(name)}</span>`;
+      const colData = r.column_analysis.find(c => c.name === name);
+      const dtype = colData ? colData.dtype : '';
+      const unique = colData ? colData.unique : '';
+      html += `<span class="col-tag" data-col="${escHtml(name)}">
+        <span class="col-tag-name">${escHtml(name)}</span>
+        <span class="col-tag-meta">${escHtml(dtype)} · ${unique} unique</span>
+      </span>`;
     });
     html += `</div></div>`;
 
@@ -187,7 +213,29 @@
     html += `<div class="col-header">
       <h3>${escHtml(col.name)}</h3>
       <span class="badge ${badgeClass}">${escHtml(col.category)}</span>
+      <span class="badge dtype">${escHtml(col.dtype)}</span>
     </div>`;
+
+    // Quick info row: unique count
+    html += `<div class="quick-info">`;
+    html += `<span class="quick-chip">Unique values: <strong>${col.unique}</strong></span>`;
+    html += `<span class="quick-chip">Missing: <strong>${col.missing}</strong></span>`;
+    html += `</div>`;
+
+    // Basic stats for numerical columns
+    if (col.stats && Object.keys(col.stats).length > 0) {
+      html += `<div class="stats-grid">`;
+      const labels = { min: 'Min', max: 'Max', mean: 'Mean', median: 'Median', std: 'Std Dev' };
+      for (const [key, label] of Object.entries(labels)) {
+        if (col.stats[key] !== undefined) {
+          html += `<div class="stat-card">
+            <div class="stat-label">${label}</div>
+            <div class="stat-value">${col.stats[key].toLocaleString()}</div>
+          </div>`;
+        }
+      }
+      html += `</div>`;
+    }
 
     // Charts
     if (col.chart) {
@@ -196,9 +244,6 @@
     if (col.chart2) {
       html += `<img class="chart-img" src="data:image/png;base64,${col.chart2}" alt="Bar chart for ${escHtml(col.name)}" />`;
     }
-
-    // Missing values
-    html += `<p class="info-row">${escHtml(col.missing_msg)}</p>`;
 
     // Outliers
     if (col.outliers && col.outliers.length > 0) {

@@ -181,6 +181,8 @@ def analyse_file(filepath: str) -> dict:
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
         "column_names": df.columns.tolist(),
+        "preview": df.head(10).fillna("").to_dict(orient="records"),
+        "preview_columns": df.columns.tolist(),
         "column_analysis": [],
     }
 
@@ -188,11 +190,28 @@ def analyse_file(filepath: str) -> dict:
         series = df[col]
         category = categorise_column(series)
         missing = int(series.isna().sum())
+        unique = int(series.nunique())
+        dtype = str(series.dtype)
+
+        # Basic stats for numerical data
+        stats = {}
+        numeric_clean = pd.to_numeric(series, errors='coerce').dropna()
+        if category in ("Numerical", "Both Numerical and Categorical") and len(numeric_clean) > 0:
+            stats = {
+                "min":    round(float(numeric_clean.min()), 4),
+                "max":    round(float(numeric_clean.max()), 4),
+                "mean":   round(float(numeric_clean.mean()), 4),
+                "median": round(float(numeric_clean.median()), 4),
+                "std":    round(float(numeric_clean.std()), 4),
+            }
 
         if category == "Both Numerical and Categorical":
             result["column_analysis"].append({
                 "name": col,
                 "category": category,
+                "dtype": dtype,
+                "unique": unique,
+                "stats": stats,
                 "missing": missing,
                 "missing_msg": f"Total missing values are : {missing}",
                 "chart": make_histogram(series, col),
@@ -212,6 +231,9 @@ def analyse_file(filepath: str) -> dict:
         result["column_analysis"].append({
             "name": col,
             "category": category,
+            "dtype": dtype,
+            "unique": unique,
+            "stats": stats,
             "missing": missing,
             "missing_msg": f"Total missing values are : {missing}",
             "chart": chart,
